@@ -48,7 +48,7 @@ namespace RelationsNaN.Controllers
         // GET: Games/Create
         public IActionResult Create()
         {
-            ViewData["GenreId"] = new SelectList(_context.Genre, "Id", "Id");
+            ViewData["GenreId"] = new SelectList(_context.Genre, "Id", "Name");
             return View();
         }
 
