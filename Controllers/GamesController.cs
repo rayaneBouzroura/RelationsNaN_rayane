@@ -22,7 +22,7 @@ namespace RelationsNaN.Controllers
         // GET: Games
         public async Task<IActionResult> Index()
         {
-            var relationsNaNContext = _context.Game.Include(g => g.Genre);
+            var relationsNaNContext = _context.Game.Include(g => g.Genre).Include(g=>g.Platforms);
             return View(await relationsNaNContext.ToListAsync());
         }
 
@@ -77,12 +77,24 @@ namespace RelationsNaN.Controllers
                 return NotFound();
             }
 
-            var game = await _context.Game.FindAsync(id);
+
+            var game = await _context.Game.Include(g => g.Platforms).FirstOrDefaultAsync(x => x.Id == id);
+
             if (game == null)
             {
                 return NotFound();
             }
-            ViewData["GenreId"] = new SelectList(_context.Genre, "Id", "Id", game.GenreId);
+            //1st param le iterable
+            //1d param is the iterable item
+            //2nd param is the iterable thingy that will be used as the value of the dropwodown
+            //3rd param is the iterable value that will be displayed (we want le nom)
+            //4th is the optional standard value that will be the initial one showcased in the drow
+            var platforms = _context.Platform.ToList();
+            //ViewData["Platforms"] = new SelectList(_context.Platform, "Id", "Name");
+            ViewData["GenreId"] = new SelectList(_context.Genre, "Id", "Name", game.GenreId);
+            ViewBag.Platforms = new SelectList(_context.Platform, "Id", "Name", game.Platforms.Select(p => p.Id));
+
+
             return View(game);
         }
 
@@ -118,6 +130,8 @@ namespace RelationsNaN.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
+            var platforms = _context.Platform.ToList(); 
+            ViewData["Platforms"] = new SelectList(_context.Platform, "Id", "Name");
             ViewData["GenreId"] = new SelectList(_context.Genre, "Id", "Id", game.GenreId);
             return View(game);
         }
@@ -159,6 +173,51 @@ namespace RelationsNaN.Controllers
         private bool GameExists(int id)
         {
             return _context.Game.Any(e => e.Id == id);
+        }
+
+
+
+
+
+        //platform actions (selon le bool it either delete la platform from le jeu or it doesnt
+
+        [HttpPost]
+        public async Task<IActionResult> EditPlatform(int gameId , int platformId, bool add)
+        {
+            //recup la platform
+            Platform platform = _context.Platform.First(x => x.Id == platformId);
+            //recup  the game 
+            Game game = _context.Game.Include(g => g.Platforms).First(x => x.Id == gameId);
+
+            //si bool pour ajouter we ajoute sinn we delete 
+            if (add)
+            {
+                game.Platforms.Add(platform);
+            }
+            else
+            {
+                game.Platforms.Remove(platform);
+            }
+            await _context.SaveChangesAsync();
+
+
+            //return to edit view
+            return View("Edit", game);
+
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> RemovePlatform(int gameId,int platformId)
+        {
+            //bool true since we modifying c tt
+            return await EditPlatform(gameId, platformId, true);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> AddPlatform(int gameId, int platformId)
+        {
+            //bool true since we modifying c tt
+            return await EditPlatform(gameId, platformId, true);
         }
     }
 }
