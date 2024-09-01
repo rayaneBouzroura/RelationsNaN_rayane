@@ -69,10 +69,16 @@ namespace RelationsNaN.Controllers
             return View(game);
         }
 
+
+
+
+
+
+
         // GET: Games/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
-            if (id == null)
+            if (id == null || _context.Game == null)
             {
                 return NotFound();
             }
@@ -90,9 +96,8 @@ namespace RelationsNaN.Controllers
             //3rd param is the iterable value that will be displayed (we want le nom)
             //4th is the optional standard value that will be the initial one showcased in the drow
             var platforms = _context.Platform.ToList();
-            //ViewData["Platforms"] = new SelectList(_context.Platform, "Id", "Name");
             ViewData["GenreId"] = new SelectList(_context.Genre, "Id", "Name", game.GenreId);
-            ViewBag.Platforms = new SelectList(_context.Platform, "Id", "Name", game.Platforms.Select(p => p.Id));
+            ViewData["Platforms"] = new SelectList(_context.Platform.Where(p => !game.Platforms.Contains(p)), "Id", "Name");
 
 
             return View(game);
@@ -130,8 +135,8 @@ namespace RelationsNaN.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            var platforms = _context.Platform.ToList(); 
-            ViewData["Platforms"] = new SelectList(_context.Platform, "Id", "Name");
+            var platforms = _context.Platform.ToList();
+            ViewData["Platforms"] = new SelectList(_context.Platform.Where(platform => !game.Platforms.Contains(platform)), "Id", "Name");
             ViewData["GenreId"] = new SelectList(_context.Genre, "Id", "Id", game.GenreId);
             return View(game);
         }
@@ -179,12 +184,27 @@ namespace RelationsNaN.Controllers
 
 
 
+        //same method used
+        [HttpPost]
+        public async Task<IActionResult> RemovePlatform(int gameId, int platformId)
+        {
+            //bool true since we modifying c tt
+            return await EditPlatform(gameId, platformId, false);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> AddPlatform(int gameId, int platformId)
+        {
+            //bool true since we modifying c tt
+            return await EditPlatform(gameId, platformId, true);
+        }
+
         //platform actions (selon le bool it either delete la platform from le jeu or it doesnt
 
         [HttpPost]
         public async Task<IActionResult> EditPlatform(int gameId , int platformId, bool add)
         {
-            //recup la platform
+            //recup la pla  tform
             Platform platform = _context.Platform.First(x => x.Id == platformId);
             //recup  the game 
             Game game = _context.Game.Include(g => g.Platforms).First(x => x.Id == gameId);
@@ -199,25 +219,14 @@ namespace RelationsNaN.Controllers
                 game.Platforms.Remove(platform);
             }
             await _context.SaveChangesAsync();
-
-
+            //TODO : select list is not refreshing ... je la re refresh i guess
+            ViewData["Platforms"] = new SelectList(_context.Platform.Where(platform => !game.Platforms.Contains(platform)), "Id", "Name");
+            ViewData["GenreId"] = new SelectList(_context.Genre, "Id", "Name", game.GenreId);
             //return to edit view
             return View("Edit", game);
 
         }
 
-        [HttpPost]
-        public async Task<IActionResult> RemovePlatform(int gameId,int platformId)
-        {
-            //bool true since we modifying c tt
-            return await EditPlatform(gameId, platformId, true);
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> AddPlatform(int gameId, int platformId)
-        {
-            //bool true since we modifying c tt
-            return await EditPlatform(gameId, platformId, true);
-        }
+       
     }
 }
